@@ -115,6 +115,7 @@
 /* Leaderboard */
 .ranking-hero{background:radial-gradient(circle at 80% 10%,#5b3b9b66,transparent 38%),linear-gradient(135deg,#101b30,#11101f 70%);border:1px solid #51417e;border-radius:18px;padding:18px;margin-bottom:12px;box-shadow:0 12px 30px #0005}
 .ranking-list{display:flex;flex-direction:column;gap:8px}.rank-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;background:linear-gradient(135deg,#151d2d,#101522);border:1px solid #273650;border-radius:13px}.rank-row.me{border-color:#9b70ff;background:linear-gradient(135deg,#2b1e4a,#111a2a);box-shadow:0 0 18px #8c55ff20}.rank-num{font-weight:950;font-size:17px;text-align:center;color:#b7c6df}.rank-row:nth-child(1) .rank-num{color:#ffd66b;font-size:23px}.rank-row:nth-child(2) .rank-num{color:#d7e2f4}.rank-row:nth-child(3) .rank-num{color:#e9a879}.rank-avatar{display:inline-grid;place-items:center;width:35px;height:35px;border-radius:11px;background:#263451;margin-right:8px;font-size:20px;vertical-align:middle}.rank-name{font-weight:800;overflow-wrap:anywhere}.rank-sub{font-size:10px;color:#91a3bf;margin-top:2px}.rank-money{font-weight:900;color:#70f0c3;text-align:right;white-space:nowrap;font-size:clamp(11px,3vw,14px)}.rank-me-tag{display:inline-block;background:#6d4ac0;color:#f3eaff;border-radius:5px;padding:2px 5px;font-size:9px;margin-left:5px;vertical-align:2px}.rank-foot{color:#91a3bf;font-size:11px;line-height:1.5}
+.rank-row.admin-selectable{cursor:pointer;transition:background .15s,border-color .15s}.rank-row.admin-selectable:hover{border-color:#9c8344;background:linear-gradient(135deg,#30291b,#171a18)}.rank-row.admin-selected{border:2px solid var(--gold)!important;background:linear-gradient(135deg,#40331b,#171a18)!important;box-shadow:0 0 16px #f2c45d22}.admin-only-panel[hidden]{display:none!important}.admin-status{margin-top:8px;font-size:12px;line-height:1.5}.admin-badge{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:5px;background:#54411d;color:#ffe19a;font-size:9px;font-weight:800}.admin-selected-label{padding:11px;background:#111611;border:1px solid #3b4337;border-radius:10px;margin:10px 0;font-size:12px;overflow-wrap:anywhere}
 
 /* Pokémon uses a single full-screen view, with the Life Simulator navigation retained. */
 body.pokemon-fullscreen{overflow:hidden}
@@ -415,6 +416,22 @@ window.addEventListener('load',()=>{const pf=document.getElementById('pokemonFra
 <div class="section-title"><h2>🏆 Bảng xếp hạng</h2><small>Người chơi thật · tiền mặt giảm dần</small></div>
 <div class="ranking-hero"><div class="eyebrow">LIFE SIMULATOR · GLOBAL LEADERBOARD</div><h2 style="margin:7px 0 4px">Ai giàu nhất?</h2><p class="muted" style="margin:0">Bảng xếp hạng trực tuyến dùng chung. Game tự tạo tài khoản khách theo trình duyệt, không cần đăng nhập.</p></div>
 <div class="card" id="rankingAuthCard"><h3>🔐 Tài khoản người chơi</h3><div id="rankingAuthStatus" class="notice">Đang tạo tài khoản khách tự động…</div><div class="field"><label>Tên hiển thị</label><input id="rankingNameInput" maxlength="28" placeholder="Tên hiển thị của bạn"></div><div class="grid2"><button id="rankingGuestBtn" class="btn goldbtn full" onclick="rankingCreateGuest()" style="display:none">🎮 Tạo tài khoản khách</button><button id="rankingSaveNameBtn" class="btn full" onclick="saveRankingName()" disabled>Lưu tên</button></div><div class="rank-foot" style="margin-top:9px">Tài khoản khách được lưu trong trình duyệt này. Xóa dữ liệu trình duyệt có thể làm mất tài khoản. Không có bot hay hồ sơ mẫu.</div></div>
+<div class="card" id="rankingAdminCard">
+ <h3>🛡️ Quản trị viên</h3>
+ <div id="rankingAdminLogin">
+  <div class="rank-foot">Đăng nhập admin để chọn một người chơi trong bảng xếp hạng và đặt lại tiến trình của họ.</div>
+  <div class="field"><label for="rankingAdminUsername">Username admin</label><input id="rankingAdminUsername" autocomplete="username" maxlength="80" placeholder="Nhập username admin"></div>
+  <div class="field"><label for="rankingAdminPassword">Password admin</label><input id="rankingAdminPassword" type="password" autocomplete="current-password" maxlength="200" placeholder="Nhập password admin" onkeydown="if(event.key==='Enter')rankingAdminLogin()"></div>
+  <button class="btn goldbtn full" id="rankingAdminLoginBtn" onclick="rankingAdminLogin()">🔐 Đăng nhập admin</button>
+  <div class="admin-status rank-foot" id="rankingAdminLoginStatus" role="status" aria-live="polite"></div>
+ </div>
+ <div id="rankingAdminPanel" class="admin-only-panel" hidden>
+  <div class="notice">Chế độ quản trị đã bật. Hãy click một người chơi trong bảng bên dưới.</div>
+  <div class="admin-selected-label" id="rankingAdminSelectionLabel">Chưa chọn người chơi.</div>
+  <div class="btnrow"><button class="btn redbtn" id="rankingAdminResetBtn" onclick="rankingAdminResetSelected()" disabled>🗑️ Xóa dữ liệu / Reset về 0</button><button class="btn" onclick="rankingAdminLogout()">Đăng xuất admin</button></div>
+  <div class="admin-status rank-foot" id="rankingAdminStatus" role="status" aria-live="polite"></div>
+ </div>
+</div>
 <div class="card"><div class="section-title" style="margin-top:0"><h3 style="margin:0">💰 Người chơi dẫn đầu</h3><small id="rankingCount">Đang tải…</small></div><div id="rankingList" class="ranking-list"><div class="empty">Đang kết nối bảng xếp hạng…</div></div><button class="btn full" onclick="rankingLoadLeaderboard()" style="margin-top:10px">↻ Làm mới bảng xếp hạng</button></div>
 <div class="rank-foot" style="padding:0 4px 10px">Bảng xếp hạng chỉ hiển thị tài khoản đã đăng nhập. Bản game hiện tại chạy logic ở trình duyệt nên đồng bộ số dư từ client chưa chống gian lận hoàn toàn; xem README và hướng dẫn triển khai để biết giới hạn này.</div>
 </section>
@@ -654,7 +671,18 @@ function openSection(id){if(state.jailed&&id!=='jail'){id='jail';}document.body.
 function renderStats(){const items=[['❤️','Sức khỏe',state.health],['😊','Hạnh phúc',state.happiness],['🍀','May mắn',state.luck],['⚠️','Nghi ngờ',state.danger]];$('stats').innerHTML=items.map(([i,n,v])=>`<div class="stat ${n==='Nghi ngờ'?'danger':''}"><div class="slabel">${i} ${n}</div><strong>${Math.round(v)}<small class="muted">/100</small></strong><div class="bar"><i style="width:${clamp(v)}%"></i></div></div>`).join('')}
 let rankingRows=[];
 function saveRankingName(){return rankingSaveDisplayName();}
-function renderRanking(){const list=$('rankingList');if(!list)return;const rows=rankingRows||[];const uid=window.lifeRankingUser?.id;const input=$('rankingNameInput');if(input&&document.activeElement!==input&&window.lifeRankingProfile&&input.value!==window.lifeRankingProfile.display_name)input.value=window.lifeRankingProfile.display_name||'';$('rankingCount').textContent=rows.length+' người chơi';if(!rows.length){list.innerHTML='<div class="empty">Chưa có người chơi đăng nhập hoặc chưa tải được dữ liệu.</div>';return;}list.innerHTML=rows.map((p,i)=>`<div class="rank-row ${p.id===uid?'me':''}"><div class="rank-num">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div><div><div class="rank-name"><span class="rank-avatar">${i===0?'👑':'👤'}</span>${esc(p.display_name||'Người chơi')}${p.id===uid?'<span class="rank-me-tag">BẠN</span>':''}</div><div class="rank-sub">${p.id===uid?'Tài khoản của bạn':'Người chơi khách'}</div></div><div class="rank-money">${fmt(Math.max(0,Number(p.cash_balance)||0))}</div></div>`).join('');}
+function renderRanking(){
+ const list=$('rankingList');if(!list)return;
+ const rows=rankingRows||[];const uid=window.lifeRankingUser?.id;
+ const input=$('rankingNameInput');
+ if(input&&document.activeElement!==input&&window.lifeRankingProfile&&input.value!==window.lifeRankingProfile.display_name)input.value=window.lifeRankingProfile.display_name||'';
+ $('rankingCount').textContent=rows.length+' người chơi';
+ const adminOn=(typeof rankingAdminCredentials!=='undefined')&&!!rankingAdminCredentials;
+ if(!rows.length){list.innerHTML='<div class="empty">Chưa có người chơi đăng nhập hoặc chưa tải được dữ liệu.</div>';if(typeof rankingAdminUpdateSelectionLabel==='function')rankingAdminUpdateSelectionLabel();return;}
+ list.innerHTML=rows.map((p,i)=>`<div class="rank-row ${p.id===uid?'me':''} ${adminOn?'admin-selectable':''} ${(typeof rankingAdminSelectedId!=='undefined'&&p.id===rankingAdminSelectedId)?'admin-selected':''}" data-player-id="${esc(String(p.id||''))}"><div class="rank-num">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div><div><div class="rank-name"><span class="rank-avatar">${i===0?'👑':'👤'}</span>${esc(p.display_name||'Người chơi')}${p.id===uid?'<span class="rank-me-tag">BẠN</span>':''}${adminOn?'<span class="admin-badge">CHỌN</span>':''}</div><div class="rank-sub">${p.id===uid?'Tài khoản của bạn':'Người chơi khách'}</div></div><div class="rank-money">${fmt(Math.max(0,Number(p.cash_balance)||0))}</div></div>`).join('');
+ if(adminOn)list.querySelectorAll('.rank-row.admin-selectable').forEach(row=>row.addEventListener('click',()=>rankingAdminSelectPlayer(row.dataset.playerId)));
+ if(typeof rankingAdminUpdateSelectionLabel==='function')rankingAdminUpdateSelectionLabel();
+}
 
 const EPL_TEAMS=['Arsenal','Aprery FC','Hull City','Manchester United','Everton','Crystal Palace','Ipswich Town','Sunderland','Nottingham Forest','Leeds United','Brentford','Tottenham Hotspur','Brighton','Aston Villa','Manchester City','Bournemouth','Newcastle United','Liverpool','Fulham','Chelsea'];
 const EPL_FIRST=[['Arsenal','Aprery FC'],['Hull City','Manchester United'],['Everton','Crystal Palace'],['Ipswich Town','Sunderland'],['Nottingham Forest','Leeds United'],['Brentford','Tottenham Hotspur'],['Brighton','Aston Villa'],['Manchester City','Bournemouth'],['Newcastle United','Liverpool'],['Fulham','Chelsea']];
@@ -1332,6 +1360,79 @@ let lifeSupabase = null;
 window.lifeRankingUser = null;
 window.lifeRankingProfile = null;
 let rankingSyncTimer = null, rankingLastSyncedCash = null, rankingBusy = false;
+let rankingAdminCredentials = null;
+let rankingAdminSelectedId = null;
+let rankingAdminBusy = false;
+let rankingSessionResetUid = null;
+let rankingSessionResetVersion = 0;
+function rankingResetVersionKey(uid){return 'lifeRankingAdminResetVersion:'+String(uid||'');}
+function rankingInitResetVersionSession(uid){if(!uid)return;if(rankingSessionResetUid!==uid){rankingSessionResetUid=uid;rankingSessionResetVersion=Number(localStorage.getItem(rankingResetVersionKey(uid))||0);}}
+function rankingRestoreSavedGame(){try{const raw=localStorage.getItem('lifeSimulatorOffline_v1');if(!raw)return false;const parsed=JSON.parse(raw);if(!parsed||typeof parsed.money!=='number'||!parsed.prices||!parsed.stocks)return false;state={...initialState(),...parsed};state.lifeAssets={...initialState().lifeAssets,...(parsed.lifeAssets||{})};state.lifeAssets.staff=state.lifeAssets.staff||[];return true;}catch(e){return false;}}
+function rankingApplyRemoteReset(profile){
+ const uid=window.lifeRankingUser?.id;if(!profile||!uid||profile.id!==uid)return false;
+ const version=Number(profile.admin_reset_version)||0;if(version<1)return false;
+ rankingInitResetVersionSession(uid);
+ if(version<=rankingSessionResetVersion)return false;
+ const storedVersion=Number(localStorage.getItem(rankingResetVersionKey(uid))||0);
+ let didReset=false;
+ if(storedVersion>=version){
+  // Another tab may already have applied the reset. Adopt its saved state rather than reviving stale memory.
+  rankingRestoreSavedGame();
+  rankingLastSyncedCash=Math.max(0,Math.floor(Number(state?.money)||0));
+ }else{
+  state=initialState();state.money=0;saveGame(false);
+  localStorage.setItem(rankingResetVersionKey(uid),String(version));
+  rankingLastSyncedCash=0;rankingNeedsResetSync=true;didReset=true;
+ }
+ rankingSessionResetVersion=version;
+ if(profile.updated_at)rankingLastSyncedAt=profile.updated_at;
+ if(typeof render==='function')render();
+ if(didReset){rankingStatus('Quản trị viên đã reset toàn bộ tiến trình Life Simulator của tài khoản này.');toast('Đã reset tiến trình và số dư về 0.');}
+ return didReset;
+}
+let rankingLastSyncedAt = null;
+let rankingNeedsResetSync = false;
+function rankingAdminSetStatus(message,isError=false){const el=$('rankingAdminLoginStatus');if(el){el.textContent=message;el.style.color=isError?'var(--red)':'var(--muted)';}}
+function rankingAdminSetPanelStatus(message,isError=false){const el=$('rankingAdminStatus');if(el){el.textContent=message;el.style.color=isError?'var(--red)':'var(--muted)';}}
+function rankingAdminUpdateSelectionLabel(){const label=$('rankingAdminSelectionLabel');const btn=$('rankingAdminResetBtn');if(!label)return;const player=(rankingRows||[]).find(p=>String(p.id)===String(rankingAdminSelectedId));if(!rankingAdminCredentials){label.textContent='Đăng nhập admin để chọn người chơi.';if(btn)btn.disabled=true;return;}if(!player){rankingAdminSelectedId=null;label.textContent='Chưa chọn người chơi. Hãy click một dòng trong bảng xếp hạng.';if(btn)btn.disabled=rankingAdminBusy;return;}label.textContent='Đã chọn: '+(player.display_name||'Người chơi')+' · Số dư hiện tại: '+fmt(Math.max(0,Number(player.cash_balance)||0));if(btn)btn.disabled=rankingAdminBusy;}
+async function rankingAdminLogin(){
+ const username=String($('rankingAdminUsername')?.value||'').trim();const password=String($('rankingAdminPassword')?.value||'');
+ if(!username||!password){rankingAdminSetStatus('Hãy nhập đủ username và password.',true);return;}
+ if(!lifeSupabase){rankingAdminSetStatus('Chưa kết nối Supabase.',true);return;}
+ const button=$('rankingAdminLoginBtn');if(button)button.disabled=true;
+ rankingAdminSetStatus('Đang xác thực với Supabase…');
+ try{
+  const {data,error}=await lifeSupabase.rpc('admin_check_credentials',{p_username:username,p_password:password});
+  if(error){console.error(error);rankingAdminSetStatus('Chưa xác thực được. Hãy chạy file setup_admin_supabase.sql trong Supabase SQL Editor rồi thử lại.',true);return;}
+  if(data!==true){rankingAdminSetStatus('Username hoặc password không chính xác.',true);return;}
+  rankingAdminCredentials={username,password};rankingAdminSelectedId=null;
+  $('rankingAdminLogin').style.display='none';$('rankingAdminPanel').hidden=false;
+  $('rankingAdminPassword').value='';rankingAdminSetPanelStatus('Đã đăng nhập admin. Click người chơi cần reset trong bảng xếp hạng.');
+  renderRanking();toast('Đăng nhập admin thành công.');
+ }catch(e){console.error(e);rankingAdminSetStatus('Lỗi khi xác thực admin.',true);}
+ finally{if(button)button.disabled=false;}
+}
+function rankingAdminSelectPlayer(playerId){if(!rankingAdminCredentials)return;const player=(rankingRows||[]).find(p=>String(p.id)===String(playerId));if(!player)return;rankingAdminSelectedId=String(player.id);renderRanking();rankingAdminSetPanelStatus('Đã chọn người chơi. Nút reset sẽ đặt số dư về 0 và yêu cầu tiến trình trên trình duyệt người chơi được làm mới khi đồng bộ.');}
+function rankingAdminLogout(){rankingAdminCredentials=null;rankingAdminSelectedId=null;rankingAdminBusy=false;$('rankingAdminPanel').hidden=true;$('rankingAdminLogin').style.display='';$('rankingAdminUsername').value='';$('rankingAdminPassword').value='';rankingAdminSetStatus('Đã đăng xuất admin.');renderRanking();}
+async function rankingAdminResetSelected(){
+ if(!rankingAdminCredentials||!rankingAdminSelectedId){rankingAdminSetPanelStatus('Hãy đăng nhập và chọn một người chơi trước.',true);return;}
+ if(rankingAdminBusy)return;
+ const player=(rankingRows||[]).find(p=>String(p.id)===String(rankingAdminSelectedId));if(!player){rankingAdminSetPanelStatus('Người chơi không còn trong bảng. Hãy làm mới bảng xếp hạng.',true);return;}
+ const name=String(player.display_name||'Người chơi');
+ if(!window.confirm('Xác nhận reset dữ liệu của “'+name+'” về 0? Thao tác này sẽ đặt số dư về 0 và reset tiến trình Life Simulator trên trình duyệt của tài khoản đó khi đồng bộ.'))return;
+ rankingAdminBusy=true;const btn=$('rankingAdminResetBtn');if(btn)btn.disabled=true;rankingAdminSetPanelStatus('Đang reset dữ liệu…');
+ try{
+  const {data,error}=await lifeSupabase.rpc('admin_reset_leaderboard',{p_username:rankingAdminCredentials.username,p_password:rankingAdminCredentials.password,p_player_id:rankingAdminSelectedId});
+  if(error){console.error(error);rankingAdminSetPanelStatus('Không reset được dữ liệu. Hãy kiểm tra SQL setup và quyền Supabase.',true);toast('Reset thất bại.');return;}
+  const updated=Array.isArray(data)?data[0]:data;
+  if(!updated||String(updated.id)!==String(rankingAdminSelectedId)){rankingAdminSetPanelStatus('Không tìm thấy người chơi để reset.',true);return;}
+  if(String(updated.id)===String(window.lifeRankingUser?.id)){rankingApplyRemoteReset(updated);}
+  rankingAdminSetPanelStatus('Đã reset '+name+' về 0. Khi trình duyệt người chơi đồng bộ, tiến trình Life Simulator sẽ được làm mới.');
+  await rankingLoadLeaderboard();toast('Đã reset '+name+' về 0.');
+ }catch(e){console.error(e);rankingAdminSetPanelStatus('Có lỗi khi reset người chơi.',true);}
+ finally{rankingAdminBusy=false;rankingAdminUpdateSelectionLabel();}
+}
+
 function rankingConfigured(){return LIFE_SUPABASE_URL.startsWith('https://') && !LIFE_SUPABASE_URL.includes('YOUR_') && LIFE_SUPABASE_ANON_KEY && !LIFE_SUPABASE_ANON_KEY.includes('YOUR_');}
 function rankingStatus(msg,isError=false){const el=$('rankingAuthStatus');if(el){el.textContent=msg;el.className=isError?'notice':'notice';}}
 async function rankingInit(){
@@ -1348,15 +1449,40 @@ async function rankingHandleSession(session){
  if(!session?.user){window.lifeRankingProfile=null;rankingStatus('Chưa có tài khoản khách. Đang thử tạo tự động…');$('rankingGuestBtn').style.display='';$('rankingSaveNameBtn').disabled=true;await rankingLoadLeaderboard();const {data,error}=await lifeSupabase.auth.signInAnonymously();if(error){console.error(error);rankingStatus('Không tạo được tài khoản khách. Hãy bật Anonymous Sign-Ins trong Supabase Authentication → Sign In / Providers.',true);$('rankingGuestBtn').style.display='';}return;}
  const u=session.user;const storedGuestName=localStorage.getItem('lifeRankingGuestName');const defaultName=(u.user_metadata?.full_name||u.user_metadata?.name||storedGuestName||('Player_'+u.id.replace(/-/g,'').slice(0,6).toUpperCase())).slice(0,28);
  const {error}=await lifeSupabase.from('leaderboard_profiles').upsert({id:u.id,display_name:defaultName,cash_balance:Math.max(0,Math.floor(Number(state?.money)||0)),updated_at:new Date().toISOString()},{onConflict:'id',ignoreDuplicates:true});if(error)console.warn(error);
- const {data,error:readErr}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance').eq('id',u.id).maybeSingle();
- if(!readErr&&data){window.lifeRankingProfile=data;rankingLastSyncedCash=Number(data.cash_balance)||0;const inp=$('rankingNameInput');if(inp)inp.value=data.display_name||defaultName;}
+ let {data,error:readErr}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at,admin_reset_version').eq('id',u.id).maybeSingle();
+ if(readErr&&/admin_reset_version|column|schema cache/i.test(readErr.message||''))({data,error:readErr}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at').eq('id',u.id).maybeSingle());
+ if(!readErr&&data){rankingInitResetVersionSession(u.id);const didReset=rankingApplyRemoteReset(data);window.lifeRankingProfile=data;rankingLastSyncedCash=didReset?0:(Number(data.cash_balance)||0);rankingLastSyncedAt=data.updated_at||null;const inp=$('rankingNameInput');if(inp)inp.value=data.display_name||defaultName;}
  rankingStatus('Đã tạo tài khoản khách: '+(window.lifeRankingProfile?.display_name||defaultName)+'. Tài khoản được nhớ trong trình duyệt này.');$('rankingGuestBtn').style.display='none';$('rankingSaveNameBtn').disabled=false;await rankingLoadLeaderboard();rankingScheduleSync(true);
 }
 async function rankingCreateGuest(){if(!lifeSupabase){toast('Hãy cấu hình Supabase trước.');return;}const {error}=await lifeSupabase.auth.signInAnonymously();if(error){console.error(error);toast('Không tạo được tài khoản khách: '+error.message);}}
-async function rankingSaveDisplayName(){if(!lifeSupabase||!window.lifeRankingUser){toast('Tài khoản khách đang được tạo, hãy thử lại sau.');return;}const name=String($('rankingNameInput').value||'').trim().slice(0,28);if(name.length<2){toast('Tên hiển thị cần ít nhất 2 ký tự.');return;}const {data,error}=await lifeSupabase.from('leaderboard_profiles').update({display_name:name,updated_at:new Date().toISOString()}).eq('id',window.lifeRankingUser.id).select('id,display_name,cash_balance').single();if(error){toast('Không lưu được tên: '+error.message);return;}localStorage.setItem('lifeRankingGuestName',name);window.lifeRankingProfile=data;rankingStatus('Đã lưu tên hiển thị: '+name);await rankingLoadLeaderboard();toast('Đã cập nhật tên hiển thị.');}
-async function rankingLoadLeaderboard(){if(!lifeSupabase){renderRanking();return;}const {data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at').order('cash_balance',{ascending:false}).order('updated_at',{ascending:true}).limit(100);if(error){console.error(error);if(!rankingConfigured())return;rankingStatus('Không tải được bảng xếp hạng. Kiểm tra SQL/RLS trong README.',true);return;}rankingRows=data||[];renderRanking();}
+async function rankingSaveDisplayName(){if(!lifeSupabase||!window.lifeRankingUser){toast('Tài khoản khách đang được tạo, hãy thử lại sau.');return;}const name=String($('rankingNameInput').value||'').trim().slice(0,28);if(name.length<2){toast('Tên hiển thị cần ít nhất 2 ký tự.');return;}const {data,error}=await lifeSupabase.from('leaderboard_profiles').update({display_name:name,updated_at:new Date().toISOString()}).eq('id',window.lifeRankingUser.id).select('id,display_name,cash_balance,updated_at').single();if(error){toast('Không lưu được tên: '+error.message);return;}localStorage.setItem('lifeRankingGuestName',name);window.lifeRankingProfile=data;rankingLastSyncedAt=data.updated_at||rankingLastSyncedAt;rankingStatus('Đã lưu tên hiển thị: '+name);await rankingLoadLeaderboard();toast('Đã cập nhật tên hiển thị.');}
+async function rankingLoadLeaderboard(){
+ if(!lifeSupabase){renderRanking();return;}
+ let {data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at,admin_reset_version').order('cash_balance',{ascending:false}).order('updated_at',{ascending:true}).limit(100);
+ if(error&&/admin_reset_version|column|schema cache/i.test(error.message||'')){({data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at').order('cash_balance',{ascending:false}).order('updated_at',{ascending:true}).limit(100));}
+ if(error){console.error(error);if(!rankingConfigured())return;rankingStatus('Không tải được bảng xếp hạng. Kiểm tra SQL/RLS trong README.',true);return;}
+ rankingRows=data||[];
+ const own=rankingRows.find(p=>p.id===window.lifeRankingUser?.id);
+ if(own){rankingInitResetVersionSession(own.id);rankingApplyRemoteReset(own);}
+ renderRanking();
+}
 function rankingScheduleSync(force=false){if(!lifeSupabase||!window.lifeRankingUser||rankingBusy)return;clearTimeout(rankingSyncTimer);rankingSyncTimer=setTimeout(()=>rankingSyncCash(force),force?250:1800);}
-async function rankingSyncCash(force=false){if(!lifeSupabase||!window.lifeRankingUser||rankingBusy||!state)return;const rawCash=Number(state.money);if(!Number.isSafeInteger(rawCash)||rawCash<0||rawCash>1000000000000000){console.warn('Đã chặn đồng bộ số dư không hợp lệ');return;}const cash=rawCash;if(!force&&cash===rankingLastSyncedCash)return;rankingBusy=true;try{const {data,error}=await lifeSupabase.from('leaderboard_profiles').update({cash_balance:cash,updated_at:new Date().toISOString()}).eq('id',window.lifeRankingUser.id).select('id,display_name,cash_balance').single();if(error){console.warn('Leaderboard sync failed',error);return;}window.lifeRankingProfile=data;rankingLastSyncedCash=cash;await rankingLoadLeaderboard();}finally{rankingBusy=false;}}
+async function rankingSyncCash(force=false){
+ if(!lifeSupabase||!window.lifeRankingUser||rankingBusy||!state)return;
+ rankingBusy=true;
+ try{
+  let {data:remote,error:remoteError}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at,admin_reset_version').eq('id',window.lifeRankingUser.id).maybeSingle();
+  if(remoteError&&/admin_reset_version|column|schema cache/i.test(remoteError.message||''))({data:remote,error:remoteError}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at').eq('id',window.lifeRankingUser.id).maybeSingle());
+  if(!remoteError&&remote){rankingApplyRemoteReset(remote);}
+  const rawCash=Number(state.money);
+  if(!Number.isSafeInteger(rawCash)||rawCash<0||rawCash>1000000000000000){console.warn('Đã chặn đồng bộ số dư không hợp lệ');return;}
+  const cash=rawCash;
+  if(!force&&cash===rankingLastSyncedCash&&!rankingNeedsResetSync)return;
+  const {data,error}=await lifeSupabase.from('leaderboard_profiles').update({cash_balance:cash,updated_at:new Date().toISOString()}).eq('id',window.lifeRankingUser.id).select('id,display_name,cash_balance,updated_at').single();
+  if(error){console.warn('Leaderboard sync failed',error);return;}
+  window.lifeRankingProfile=data;rankingLastSyncedCash=cash;rankingLastSyncedAt=data.updated_at||rankingLastSyncedAt;rankingNeedsResetSync=false;await rankingLoadLeaderboard();
+ }finally{rankingBusy=false;}
+}
 // Poll so players see other guest players' latest ranking without refreshing manually.
 setInterval(()=>{if(document.visibilityState==='visible'&&lifeSupabase)rankingLoadLeaderboard();},15000);
 // The game calls render() frequently; debounce syncing so only changed balances are sent.
@@ -1869,4 +1995,50 @@ function lifePokerPickPercent(percent){
 }
 function lifePokerBuyIn(){if(lifePokerActive)return;const error=document.getElementById('lifePokerError');error.textContent='';const amount=Number(document.getElementById('lifePokerAmount').value);if(!Number.isSafeInteger(amount)||amount<20||amount>Math.floor(state.money||0)){error.textContent='Nhập số tiền từ 20đ đến số dư hiện có.';return}if(!pay(amount)){error.textContent='Không đủ tiền để vào bàn.';return}lifePokerBuyInAmount=amount;lifePokerActive=true;saveGame();render();const frame=document.getElementById('lifePokerFrame');frame.onload=sendLifePokerNames;frame.srcdoc=lifePokerEmbeddedHTML.replace('<head>','<head><script>window.lifePokerStartingChips='+amount+';<'+'/script>');document.getElementById('lifePokerGate').style.display='none'}
 function closeLifePoker(){if(lifePokerSettling)return;lifePokerSettling=true;try{if(lifePokerActive){const frame=document.getElementById('lifePokerFrame');const bridge=frame.contentWindow?.PokerLifeBridge;if(!bridge||typeof bridge.cashout!=='function'){alert('Game chưa tải xong. Chờ một chút để rút chip.');return}const chips=bridge.cashout();if(!Number.isSafeInteger(chips)||chips<0){alert('Không thể xác nhận số chip. Hãy thử lại.');return}const cash=chips;state.money+=cash;const profit=cash-lifePokerBuyInAmount;if(profit>0){state.totalEarned=(state.totalEarned||0)+profit;incomeTaxOnProfit(profit)}lifePokerActive=false;lifePokerBuyInAmount=0;frame.srcdoc='';saveGame();render();toast('♠️ Poker: Nhận '+cash.toLocaleString('vi-VN')+'đ'+(profit>=0?' · Lãi '+profit.toLocaleString('vi-VN')+'đ':' · Lỗ '+Math.abs(profit).toLocaleString('vi-VN')+'đ'))}document.getElementById('lifePokerOverlay').style.display='none';document.body.style.overflow=''}finally{lifePokerSettling=false}}
-</script></body></html>
+</script><!-- CLIENT-SIDE DEVTOOLS DETERRENCE: not a security boundary -->
+<style id="client-devtools-deterrence-style">
+#page-protection-notice{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translate(-50%,10px);z-index:999999;max-width:min(92vw,560px);padding:11px 15px;border:1px solid #806b36;border-radius:12px;background:#171811;color:#ffe6a0;box-shadow:0 8px 28px #000b;font:700 12px/1.45 system-ui,sans-serif;text-align:center;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
+#page-protection-notice.visible{opacity:1;transform:translate(-50%,0)}
+</style>
+<script id="client-devtools-deterrence">
+(function(){
+  'use strict';
+  let noticeTimer;
+  function showProtectionNotice(){
+    let notice=document.getElementById('page-protection-notice');
+    if(!notice){
+      notice=document.createElement('div');
+      notice.id='page-protection-notice';
+      notice.setAttribute('role','status');
+      notice.setAttribute('aria-live','polite');
+      document.body.appendChild(notice);
+    }
+    notice.textContent='Phím tắt này đã bị chặn trên trang. Lưu ý: trình duyệt vẫn có thể mở DevTools bằng menu riêng.';
+    notice.classList.add('visible');
+    window.clearTimeout(noticeTimer);
+    noticeTimer=window.setTimeout(function(){notice.classList.remove('visible');},2800);
+  }
+  function isEditable(target){
+    return !!(target && target.closest && target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]'));
+  }
+  document.addEventListener('keydown',function(event){
+    if(event.defaultPrevented || event.isComposing) return;
+    const key=String(event.key||'').toLowerCase();
+    const modifier=event.ctrlKey||event.metaKey;
+    const devtoolsCombo=(modifier && event.shiftKey && ['i','j','c','k'].includes(key));
+    const viewSourceCombo=(modifier && key==='u');
+    const blocked=key==='f12'||devtoolsCombo||viewSourceCombo;
+    if(!blocked) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof event.stopImmediatePropagation==='function') event.stopImmediatePropagation();
+    showProtectionNotice();
+  },true);
+  document.addEventListener('contextmenu',function(event){
+    if(isEditable(event.target)) return;
+    event.preventDefault();
+    showProtectionNotice();
+  },true);
+})();
+</script>
+</body></html>
