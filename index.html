@@ -428,7 +428,10 @@ window.addEventListener('load',()=>{const pf=document.getElementById('pokemonFra
  <div id="rankingAdminPanel" class="admin-only-panel" hidden>
   <div class="notice">Chế độ quản trị đã bật. Hãy click một người chơi trong bảng bên dưới.</div>
   <div class="admin-selected-label" id="rankingAdminSelectionLabel">Chưa chọn người chơi.</div>
-  <div class="btnrow"><button class="btn redbtn" id="rankingAdminResetBtn" onclick="rankingAdminResetSelected()" disabled>🗑️ Xóa dữ liệu / Reset về 0</button><button class="btn" onclick="rankingAdminLogout()">Đăng xuất admin</button></div>
+  <div class="field"><label for="rankingAdminAmount">Số tiền muốn cộng (số nguyên rất lớn, tối đa 100 chữ số)</label><input id="rankingAdminAmount" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="100" autocomplete="off" placeholder="Ví dụ: 100000000000000000000000" aria-describedby="rankingAdminAmountHint"></div>
+  <div class="rank-foot" id="rankingAdminAmountHint">Chọn người chơi trên bảng xếp hạng, nhập chữ số liền nhau (không dấu chấm/phẩy), rồi bấm Cộng tiền.</div>
+  <div class="btnrow"><button class="btn redbtn" id="rankingAdminResetBtn" onclick="rankingAdminResetSelected()" disabled>🗑️ Xóa dữ liệu / Reset về 0</button><button class="btn goldbtn" id="rankingAdminAddMoneyBtn" onclick="rankingAdminAddMoneySelected()" disabled>➕ Cộng tiền</button></div>
+  <div class="btnrow"><button class="btn" onclick="rankingAdminLogout()">Đăng xuất admin</button></div>
   <div class="admin-status rank-foot" id="rankingAdminStatus" role="status" aria-live="polite"></div>
  </div>
 </div>
@@ -447,6 +450,7 @@ window.addEventListener('load',()=>{const pf=document.getElementById('pokemonFra
 <script>
 'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Math.round(n).toLocaleString('vi-VN')+' ₫', clamp=(n,a=0,b=100)=>Math.max(a,Math.min(b,n)), rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a, pick=a=>a[Math.floor(Math.random()*a.length)], esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rankingFormatExactCash(value){const raw=String(value??'0').trim();if(/^\d+$/.test(raw)){const normalized=raw.replace(/^0+(?=\d)/,'');return normalized.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+' ₫';}return fmt(Math.max(0,Number(value)||0));}
 const JOBS=[
 {id:'shop',name:'Nhân viên cửa hàng',pay:450000,duration:4,req:20,desc:'Ca bán hàng, công việc ổn định.'},
 {id:'food',name:'Phục vụ quán ăn',pay:520000,duration:5,req:25,desc:'Phục vụ giờ cao điểm, cần sức khỏe.'},
@@ -679,7 +683,7 @@ function renderRanking(){
  $('rankingCount').textContent=rows.length+' người chơi';
  const adminOn=(typeof rankingAdminCredentials!=='undefined')&&!!rankingAdminCredentials;
  if(!rows.length){list.innerHTML='<div class="empty">Chưa có người chơi đăng nhập hoặc chưa tải được dữ liệu.</div>';if(typeof rankingAdminUpdateSelectionLabel==='function')rankingAdminUpdateSelectionLabel();return;}
- list.innerHTML=rows.map((p,i)=>`<div class="rank-row ${p.id===uid?'me':''} ${adminOn?'admin-selectable':''} ${(typeof rankingAdminSelectedId!=='undefined'&&p.id===rankingAdminSelectedId)?'admin-selected':''}" data-player-id="${esc(String(p.id||''))}"><div class="rank-num">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div><div><div class="rank-name"><span class="rank-avatar">${i===0?'👑':'👤'}</span>${esc(p.display_name||'Người chơi')}${p.id===uid?'<span class="rank-me-tag">BẠN</span>':''}${adminOn?'<span class="admin-badge">CHỌN</span>':''}</div><div class="rank-sub">${p.id===uid?'Tài khoản của bạn':'Người chơi khách'}</div></div><div class="rank-money">${fmt(Math.max(0,Number(p.cash_balance)||0))}</div></div>`).join('');
+ list.innerHTML=rows.map((p,i)=>`<div class="rank-row ${p.id===uid?'me':''} ${adminOn?'admin-selectable':''} ${(typeof rankingAdminSelectedId!=='undefined'&&p.id===rankingAdminSelectedId)?'admin-selected':''}" data-player-id="${esc(String(p.id||''))}"><div class="rank-num">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div><div><div class="rank-name"><span class="rank-avatar">${i===0?'👑':'👤'}</span>${esc(p.display_name||'Người chơi')}${p.id===uid?'<span class="rank-me-tag">BẠN</span>':''}${adminOn?'<span class="admin-badge">CHỌN</span>':''}</div><div class="rank-sub">${p.id===uid?'Tài khoản của bạn':'Người chơi khách'}</div></div><div class="rank-money">${rankingFormatExactCash(p.cash_balance_exact??p.cash_balance)}</div></div>`).join('');
  if(adminOn)list.querySelectorAll('.rank-row.admin-selectable').forEach(row=>row.addEventListener('click',()=>rankingAdminSelectPlayer(row.dataset.playerId)));
  if(typeof rankingAdminUpdateSelectionLabel==='function')rankingAdminUpdateSelectionLabel();
 }
@@ -1402,11 +1406,33 @@ function rankingApplyRemoteReset(profile){
  toast('Admin đã reset dữ liệu và số dư về 0.');
  return true;
 }
+function rankingApplyRemoteCredit(profile){
+ const uid=window.lifeRankingUser?.id;
+ if(!profile||!uid||String(profile.id)!==String(uid))return false;
+ const version=Number(profile.admin_credit_version)||0;
+ const appliedVersion=Number(state?.adminCreditVersionApplied)||0;
+ if(version<=appliedVersion)return false;
+ const exact=String(profile.cash_balance_exact??profile.cash_balance??'0');
+ if(!/^\d+$/.test(exact))return false;
+ const parsed=Number(exact);
+ if(!Number.isFinite(parsed))return false;
+ // Apply the latest server-authoritative total; exact digits remain stored/displayed separately.
+ state.money=parsed;
+ state.adminCreditVersionApplied=version;
+ state.adminResetVersionApplied=Math.max(Number(state.adminResetVersionApplied)||0,Number(profile.admin_reset_version)||0);
+ rankingLastSyncedCash=parsed;
+ rankingLastSyncedAt=profile.updated_at||rankingLastSyncedAt;
+ saveGame(false);
+ if(typeof render==='function')render();
+ if(parsed>1000000000000000){rankingStatus('Admin đã cộng tiền. Số dư chính xác được giữ trên máy chủ; các giao dịch tiếp theo trong game không thể đồng bộ chính xác khi vượt 1.000.000.000.000.000 ₫ do giới hạn engine hiện tại.',true);}
+ else {rankingStatus('Đã nhận số dư mới từ quản trị viên.');}
+ return true;
+}
 let rankingLastSyncedAt = null;
 let rankingNeedsResetSync = false;
 function rankingAdminSetStatus(message,isError=false){const el=$('rankingAdminLoginStatus');if(el){el.textContent=message;el.style.color=isError?'var(--red)':'var(--muted)';}}
 function rankingAdminSetPanelStatus(message,isError=false){const el=$('rankingAdminStatus');if(el){el.textContent=message;el.style.color=isError?'var(--red)':'var(--muted)';}}
-function rankingAdminUpdateSelectionLabel(){const label=$('rankingAdminSelectionLabel');const btn=$('rankingAdminResetBtn');if(!label)return;const player=(rankingRows||[]).find(p=>String(p.id)===String(rankingAdminSelectedId));if(!rankingAdminCredentials){label.textContent='Đăng nhập admin để chọn người chơi.';if(btn)btn.disabled=true;return;}if(!player){rankingAdminSelectedId=null;label.textContent='Chưa chọn người chơi. Hãy click một dòng trong bảng xếp hạng.';if(btn)btn.disabled=rankingAdminBusy;return;}label.textContent='Đã chọn: '+(player.display_name||'Người chơi')+' · Số dư hiện tại: '+fmt(Math.max(0,Number(player.cash_balance)||0));if(btn)btn.disabled=rankingAdminBusy;}
+function rankingAdminUpdateSelectionLabel(){const label=$('rankingAdminSelectionLabel');const btn=$('rankingAdminResetBtn');const addBtn=$('rankingAdminAddMoneyBtn');if(!label)return;const player=(rankingRows||[]).find(p=>String(p.id)===String(rankingAdminSelectedId));if(!rankingAdminCredentials){label.textContent='Đăng nhập admin để chọn người chơi.';if(btn)btn.disabled=true;if(addBtn)addBtn.disabled=true;return;}if(!player){rankingAdminSelectedId=null;label.textContent='Chưa chọn người chơi. Hãy click một dòng trong bảng xếp hạng.';if(btn)btn.disabled=true;if(addBtn)addBtn.disabled=true;return;}label.textContent='Đã chọn: '+(player.display_name||'Người chơi')+' · Số dư hiện tại: '+rankingFormatExactCash(player.cash_balance_exact??player.cash_balance);if(btn)btn.disabled=rankingAdminBusy;if(addBtn)addBtn.disabled=rankingAdminBusy;}
 async function rankingAdminLogin(){
  const username=String($('rankingAdminUsername')?.value||'').trim();const password=String($('rankingAdminPassword')?.value||'');
  if(!username||!password){rankingAdminSetStatus('Hãy nhập đủ username và password.',true);return;}
@@ -1425,14 +1451,14 @@ async function rankingAdminLogin(){
  finally{if(button)button.disabled=false;}
 }
 function rankingAdminSelectPlayer(playerId){if(!rankingAdminCredentials)return;const player=(rankingRows||[]).find(p=>String(p.id)===String(playerId));if(!player)return;rankingAdminSelectedId=String(player.id);renderRanking();rankingAdminSetPanelStatus('Đã chọn người chơi. Nút reset sẽ đặt số dư về 0 và yêu cầu tiến trình trên trình duyệt người chơi được làm mới khi đồng bộ.');}
-function rankingAdminLogout(){rankingAdminCredentials=null;rankingAdminSelectedId=null;rankingAdminBusy=false;$('rankingAdminPanel').hidden=true;$('rankingAdminLogin').style.display='';$('rankingAdminUsername').value='';$('rankingAdminPassword').value='';rankingAdminSetStatus('Đã đăng xuất admin.');renderRanking();}
+function rankingAdminLogout(){rankingAdminCredentials=null;rankingAdminSelectedId=null;rankingAdminBusy=false;$('rankingAdminAmount').value='';$('rankingAdminPanel').hidden=true;$('rankingAdminLogin').style.display='';$('rankingAdminUsername').value='';$('rankingAdminPassword').value='';rankingAdminSetStatus('Đã đăng xuất admin.');renderRanking();}
 async function rankingAdminResetSelected(){
  if(!rankingAdminCredentials||!rankingAdminSelectedId){rankingAdminSetPanelStatus('Hãy đăng nhập và chọn một người chơi trước.',true);return;}
  if(rankingAdminBusy)return;
  const player=(rankingRows||[]).find(p=>String(p.id)===String(rankingAdminSelectedId));if(!player){rankingAdminSetPanelStatus('Người chơi không còn trong bảng. Hãy làm mới bảng xếp hạng.',true);return;}
  const name=String(player.display_name||'Người chơi');
  if(!window.confirm('Xác nhận reset dữ liệu của “'+name+'” về 0? Thao tác này sẽ đặt số dư về 0 và reset tiến trình Life Simulator trên trình duyệt của tài khoản đó khi đồng bộ.'))return;
- rankingAdminBusy=true;const btn=$('rankingAdminResetBtn');if(btn)btn.disabled=true;rankingAdminSetPanelStatus('Đang reset dữ liệu…');
+ rankingAdminBusy=true;rankingAdminUpdateSelectionLabel();rankingAdminSetPanelStatus('Đang reset dữ liệu…');
  try{
   const {data,error}=await lifeSupabase.rpc('admin_reset_leaderboard',{p_username:rankingAdminCredentials.username,p_password:rankingAdminCredentials.password,p_player_id:rankingAdminSelectedId});
   if(error){console.error(error);rankingAdminSetPanelStatus('Không reset được dữ liệu. Hãy kiểm tra SQL setup và quyền Supabase.',true);toast('Reset thất bại.');return;}
@@ -1442,6 +1468,34 @@ async function rankingAdminResetSelected(){
   rankingAdminSetPanelStatus('Đã reset '+name+' về 0. Khi trình duyệt người chơi đồng bộ, tiến trình Life Simulator sẽ được làm mới.');
   await rankingLoadLeaderboard();toast('Đã reset '+name+' về 0.');
  }catch(e){console.error(e);rankingAdminSetPanelStatus('Có lỗi khi reset người chơi.',true);}
+ finally{rankingAdminBusy=false;rankingAdminUpdateSelectionLabel();}
+}
+
+async function rankingAdminAddMoneySelected(){
+ if(!rankingAdminCredentials||!rankingAdminSelectedId){rankingAdminSetPanelStatus('Hãy đăng nhập và chọn một người chơi trước.',true);return;}
+ if(rankingAdminBusy)return;
+ const player=(rankingRows||[]).find(p=>String(p.id)===String(rankingAdminSelectedId));
+ if(!player){rankingAdminSetPanelStatus('Người chơi không còn trong bảng. Hãy làm mới bảng xếp hạng.',true);return;}
+ const amount=String($('rankingAdminAmount')?.value||'').trim();
+ if(!/^\d{1,100}$/.test(amount)||!/[1-9]/.test(amount)){rankingAdminSetPanelStatus('Nhập số nguyên dương gồm 1–100 chữ số, không có dấu chấm hoặc dấu phẩy.',true);return;}
+ const name=String(player.display_name||'Người chơi');
+ if(!window.confirm('Xác nhận cộng '+rankingFormatExactCash(amount)+' cho “'+name+'”? Số dư hiện tại sẽ được cộng thêm số tiền này.'))return;
+ rankingAdminBusy=true;rankingAdminUpdateSelectionLabel();rankingAdminSetPanelStatus('Đang cộng tiền chính xác trên Supabase…');
+ try{
+  const {data,error}=await lifeSupabase.rpc('admin_add_leaderboard_cash',{p_username:rankingAdminCredentials.username,p_password:rankingAdminCredentials.password,p_player_id:rankingAdminSelectedId,p_amount_text:amount});
+  if(error){console.error(error);rankingAdminSetPanelStatus('Không cộng được tiền. Hãy chạy file setup_admin_supabase.sql mới trong Supabase SQL Editor rồi thử lại.',true);toast('Cộng tiền thất bại.');return;}
+  const updated=Array.isArray(data)?data[0]:data;
+  if(!updated||String(updated.id)!==String(rankingAdminSelectedId)){rankingAdminSetPanelStatus('Không tìm thấy người chơi để cộng tiền.',true);return;}
+  const idx=rankingRows.findIndex(p=>String(p.id)===String(updated.id));
+  if(idx>=0)rankingRows[idx]={...rankingRows[idx],...updated};
+  if(String(updated.id)===String(window.lifeRankingUser?.id))rankingApplyRemoteCredit(updated);
+  $('rankingAdminAmount').value='';
+  const total=String(updated.cash_balance_exact??updated.cash_balance??'0');
+  let message='Đã cộng '+rankingFormatExactCash(amount)+' cho '+name+'. Số dư mới: '+rankingFormatExactCash(total)+'.';
+  if(/^\d+$/.test(total)&&BigInt(total)>1000000000000000n)message+=' Lưu ý: game hiện giữ số dư này chính xác trên máy chủ; phần tính toán và giao dịch trong game bị giới hạn bởi kiểu Number.';
+  rankingAdminSetPanelStatus(message);
+  await rankingLoadLeaderboard();toast('Đã cộng tiền cho '+name+'.');
+ }catch(e){console.error(e);rankingAdminSetPanelStatus('Có lỗi khi cộng tiền người chơi.',true);}
  finally{rankingAdminBusy=false;rankingAdminUpdateSelectionLabel();}
 }
 
@@ -1463,10 +1517,11 @@ async function rankingHandleSession(session){
  // Create/read the profile through a SECURITY DEFINER RPC. Direct client inserts/updates of cash are disabled in SQL.
  const {data:ensured,error:ensureError}=await lifeSupabase.rpc('ensure_leaderboard_profile',{p_display_name:defaultName});
  if(ensureError){console.error(ensureError);rankingStatus('Chưa khởi tạo được hồ sơ. Hãy chạy bản SQL mới setup_admin_supabase.sql trong Supabase SQL Editor.',true);return;}
- let {data,error:readErr}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at,admin_reset_version').eq('id',u.id).maybeSingle();
+ let {data,error:readErr}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,cash_balance_exact,updated_at,admin_reset_version,admin_credit_version').eq('id',u.id).maybeSingle();
  if(readErr||!data){console.error(readErr);rankingStatus('Không tải được hồ sơ người chơi. Hãy chạy bản SQL mới setup_admin_supabase.sql.',true);return;}
  rankingInitResetVersionSession(u.id);
  const didReset=rankingApplyRemoteReset(data);
+ const didCredit=rankingApplyRemoteCredit(data);
  window.lifeRankingProfile={...data};
  rankingLastSyncedCash=didReset?0:(Number(data.cash_balance)||0);
  rankingLastSyncedAt=data.updated_at||null;
@@ -1474,15 +1529,15 @@ async function rankingHandleSession(session){
  rankingStatus('Đã kết nối tài khoản khách: '+(window.lifeRankingProfile?.display_name||defaultName)+'. Dữ liệu reset được xác minh từ máy chủ.');$('rankingGuestBtn').style.display='none';$('rankingSaveNameBtn').disabled=false;await rankingLoadLeaderboard();rankingScheduleSync(true);
 }
 async function rankingCreateGuest(){if(!lifeSupabase){toast('Hãy cấu hình Supabase trước.');return;}const {error}=await lifeSupabase.auth.signInAnonymously();if(error){console.error(error);toast('Không tạo được tài khoản khách: '+error.message);}}
-async function rankingSaveDisplayName(){if(!lifeSupabase||!window.lifeRankingUser){toast('Tài khoản khách đang được tạo, hãy thử lại sau.');return;}const name=String($('rankingNameInput').value||'').trim().slice(0,28);if(name.length<2){toast('Tên hiển thị cần ít nhất 2 ký tự.');return;}const {data,error}=await lifeSupabase.from('leaderboard_profiles').update({display_name:name,updated_at:new Date().toISOString()}).eq('id',window.lifeRankingUser.id).select('id,display_name,cash_balance,updated_at').single();if(error){toast('Không lưu được tên: '+error.message);return;}localStorage.setItem('lifeRankingGuestName',name);window.lifeRankingProfile=data;rankingLastSyncedAt=data.updated_at||rankingLastSyncedAt;rankingStatus('Đã lưu tên hiển thị: '+name);await rankingLoadLeaderboard();toast('Đã cập nhật tên hiển thị.');}
+async function rankingSaveDisplayName(){if(!lifeSupabase||!window.lifeRankingUser){toast('Tài khoản khách đang được tạo, hãy thử lại sau.');return;}const name=String($('rankingNameInput').value||'').trim().slice(0,28);if(name.length<2){toast('Tên hiển thị cần ít nhất 2 ký tự.');return;}const {data,error}=await lifeSupabase.from('leaderboard_profiles').update({display_name:name,updated_at:new Date().toISOString()}).eq('id',window.lifeRankingUser.id).select('id,display_name,cash_balance,cash_balance_exact,updated_at,admin_reset_version,admin_credit_version').single();if(error){toast('Không lưu được tên: '+error.message);return;}localStorage.setItem('lifeRankingGuestName',name);window.lifeRankingProfile=data;rankingLastSyncedAt=data.updated_at||rankingLastSyncedAt;rankingStatus('Đã lưu tên hiển thị: '+name);await rankingLoadLeaderboard();toast('Đã cập nhật tên hiển thị.');}
 async function rankingLoadLeaderboard(){
  if(!lifeSupabase){renderRanking();return;}
- let {data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at,admin_reset_version').order('cash_balance',{ascending:false}).order('updated_at',{ascending:true}).limit(100);
- if(error&&/admin_reset_version|column|schema cache/i.test(error.message||'')){({data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at').order('cash_balance',{ascending:false}).order('updated_at',{ascending:true}).limit(100));}
+ let {data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,cash_balance_exact,updated_at,admin_reset_version,admin_credit_version').order('cash_balance',{ascending:false}).order('updated_at',{ascending:true}).limit(100);
+ if(error&&/admin_reset_version|admin_credit_version|cash_balance_exact|column|schema cache/i.test(error.message||'')){({data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at').order('cash_balance',{ascending:false}).order('updated_at',{ascending:true}).limit(100));}
  if(error){console.error(error);if(!rankingConfigured())return;rankingStatus('Không tải được bảng xếp hạng. Kiểm tra SQL/RLS trong README.',true);return;}
  rankingRows=data||[];
  const own=rankingRows.find(p=>p.id===window.lifeRankingUser?.id);
- if(own){rankingInitResetVersionSession(own.id);rankingApplyRemoteReset(own);}
+ if(own){rankingInitResetVersionSession(own.id);rankingApplyRemoteReset(own);rankingApplyRemoteCredit(own);}
  renderRanking();
 }
 function rankingScheduleSync(force=false){if(!lifeSupabase||!window.lifeRankingUser||rankingBusy)return;clearTimeout(rankingSyncTimer);rankingSyncTimer=setTimeout(()=>rankingSyncCash(force),force?250:1800);}
@@ -1490,10 +1545,11 @@ async function rankingSyncCash(force=false){
  if(!lifeSupabase||!window.lifeRankingUser||rankingBusy||!state)return;
  rankingBusy=true;
  try{
-  const {data:remote,error:remoteError}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at,admin_reset_version').eq('id',window.lifeRankingUser.id).maybeSingle();
+  const {data:remote,error:remoteError}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,cash_balance_exact,updated_at,admin_reset_version,admin_credit_version').eq('id',window.lifeRankingUser.id).maybeSingle();
   if(remoteError||!remote){console.warn('Could not verify the current server reset version',remoteError);return;}
   const resetApplied=rankingApplyRemoteReset(remote);
-  if(resetApplied){
+  const creditApplied=rankingApplyRemoteCredit(remote);
+  if(resetApplied||creditApplied){
    // Never send the pre-reset balance after applying a newer server reset.
    rankingLastSyncedCash=0;
    force=true;
@@ -1520,7 +1576,7 @@ async function rankingSyncCash(force=false){
  }finally{rankingBusy=false;}
 }
 // Poll so players see other guest players' latest ranking without refreshing manually.
-setInterval(async()=>{if(document.visibilityState!=='visible'||!lifeSupabase)return;await rankingLoadLeaderboard();if(window.lifeRankingUser&&!rankingBusy){const {data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,updated_at,admin_reset_version').eq('id',window.lifeRankingUser.id).maybeSingle();if(!error&&data&&rankingApplyRemoteReset(data))rankingScheduleSync(true);}},15000);
+setInterval(async()=>{if(document.visibilityState!=='visible'||!lifeSupabase)return;await rankingLoadLeaderboard();if(window.lifeRankingUser&&!rankingBusy){const {data,error}=await lifeSupabase.from('leaderboard_profiles').select('id,display_name,cash_balance,cash_balance_exact,updated_at,admin_reset_version,admin_credit_version').eq('id',window.lifeRankingUser.id).maybeSingle();if(!error&&data&&(rankingApplyRemoteReset(data)||rankingApplyRemoteCredit(data)))rankingScheduleSync(true);}},15000);
 // The game calls render() frequently; debounce syncing so only changed balances are sent.
 const _rankingOriginalRender=window.render;
 if(typeof _rankingOriginalRender==='function'){window.render=function(){const result=_rankingOriginalRender.apply(this,arguments);rankingScheduleSync(false);return result;};}
